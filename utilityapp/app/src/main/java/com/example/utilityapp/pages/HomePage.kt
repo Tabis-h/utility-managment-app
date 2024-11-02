@@ -17,6 +17,7 @@ import com.example.utilityapp.AuthViewModel
 @Composable
 fun HomePage(modifier: Modifier = Modifier, navController: NavController,authViewModel: AuthViewModel) {
     val authState = authViewModel.authState.observeAsState()
+
     LaunchedEffect(authState.value) {
         when(authState.value){
             is AuthState.Authenticated -> Unit

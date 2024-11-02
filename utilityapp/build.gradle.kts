@@ -5,3 +5,10 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.google.gms.google.services) apply false
 }
+
+buildscript {
+    dependencies {
+        // ... other dependencies ...
+        classpath("com.google.gms:google-services:4.4.0") // Use the latest version
+    }
+}
