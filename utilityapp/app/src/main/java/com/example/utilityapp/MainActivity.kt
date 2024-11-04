@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             UtilityAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    MainScreen()
                     MyAppNavigation(
                         modifier = Modifier.padding(innerPadding),
                         authViewModel = authViewModel
