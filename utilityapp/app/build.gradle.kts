@@ -61,6 +61,8 @@ implementation(libs.androidx.core.ktx)
     implementation(libs.firebase.crashlytics.buildtools)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.database)
+    implementation(libs.androidx.coordinatorlayout)
+    implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -71,6 +73,7 @@ implementation(libs.androidx.core.ktx)
     implementation ("com.google.android.gms:play-services-auth:21.1.0")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation(libs.androidx.appcompat)
 
 
 }
