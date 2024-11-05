@@ -2,6 +2,7 @@ package com.example.utilityapp.page
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
@@ -10,6 +11,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.utilityapp.AuthViewModel
 import com.example.utilityapp.Navitem
@@ -26,10 +29,10 @@ fun MainScreen(
     authViewModel: AuthViewModel
 ) {
     val navItemList = listOf(
-        Navitem("Home", Icons.Default.Home, badgeCount = 0),
-        Navitem("Notification", Icons.Default.Notifications, badgeCount = 0),
-        Navitem("Settings", Icons.Default.Settings, badgeCount = 0),
-        Navitem("Profile", Icons.Default.AccountBox, badgeCount = 0),
+        Navitem("", Icons.Default.Home, badgeCount = 0),
+        Navitem("", Icons.Default.Notifications, badgeCount = 0), // Abbreviate label if needed
+        Navitem("", Icons.Default.Settings, badgeCount = 0),
+        Navitem("", Icons.Default.AccountBox, badgeCount = 0),
     )
 
     var selectedIndex by remember { mutableIntStateOf(0) }
@@ -48,10 +51,20 @@ fun MainScreen(
                                     Badge { Text(text = navItem.badgeCount.toString()) }
                                 }
                             }) {
-                                Icon(imageVector = navItem.icon, contentDescription = "Icon")
+                                Icon(
+                                    imageVector = navItem.icon,
+                                    contentDescription = navItem.label,
+                                    modifier = Modifier.size(28.dp) // Adjust icon size if needed
+                                )
                             }
                         },
-                        label = { Text(text = navItem.label) }
+                        label = {
+                            Text(
+                                text = navItem.label,
+                                fontSize = 11.sp, // Adjust font size here
+                                maxLines = 1 // Ensure single-line display
+                            )
+                        }
                     )
                 }
             }
@@ -60,6 +73,7 @@ fun MainScreen(
         ContentScreen(modifier = Modifier.padding(innerPadding), selectedIndex, navController, authViewModel)
     }
 }
+
 
 @Composable
 fun ContentScreen(
