@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.utilityapp.page.MainScreen
 import com.example.utilityapp.ui.theme.UtilityAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -30,8 +31,17 @@ class MainActivity : ComponentActivity() {
                     MyAppNavigation(
                         modifier = Modifier.padding(innerPadding),
                         authViewModel = authViewModel
+
                     )
                 }
+            }
+
+            setContent {
+                UtilityAppTheme {
+                    MainScreen()
+                }
+
+
             }
         }
     }
