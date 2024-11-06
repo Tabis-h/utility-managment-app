@@ -21,7 +21,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import com.example.utilityapp.Navitem
+import com.example.utilityapp.R
 import com.example.utilityapp.pages.HomePage
 import com.example.utilityapp.pages.NotificationPage
 import com.example.utilityapp.pages.ProfilePage
@@ -80,11 +83,36 @@ fun MainScreen(modifier: Modifier = Modifier) {
 
 
 @Composable
-fun ContentScreen(modifier: Modifier = Modifier, selectedIndex : Int) {
-    when(selectedIndex){
-        0-> HomePage()
-        1-> NotificationPage()
-        2-> SettingsPage()
-        3-> ProfilePage()
+fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int) {
+    // Example values for profile page
+    val username = "John Doe"
+    val email = "john.doe@example.com"
+    val profileImage: Painter = painterResource(id = R.drawable.default_profile_image) // Use a valid image resource ID
+
+    // Callback functions for Edit Profile and Logout buttons
+    val onEditProfileClick: () -> Unit = {
+        // Handle Edit Profile click
+        println("Edit Profile clicked")
+    }
+
+    val onLogoutClick: () -> Unit = {
+        // Handle Logout click
+        println("Logout clicked")
+    }
+
+    when (selectedIndex) {
+        0 -> HomePage()
+        1 -> NotificationPage()
+        2 -> SettingsPage()
+        3 -> {
+            // Pass required parameters to ProfilePage
+            ProfilePage(
+                profileImage = profileImage,   // Pass the Painter object for the profile image
+                username = username,           // Pass the username string
+                email = email,                 // Pass the email string
+                onEditProfileClick = onEditProfileClick,   // Pass the callback for edit profile
+                onLogoutClick = onLogoutClick  // Pass the callback for logout
+            )
+        }
     }
 }
