@@ -1,5 +1,6 @@
 package com.example.utilityapp.page
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavHostController
+import com.example.utilityapp.AuthViewModel
 import com.example.utilityapp.Navitem
 import com.example.utilityapp.R
 import com.example.utilityapp.pages.HomePage
@@ -30,11 +34,15 @@ import com.example.utilityapp.pages.NotificationPage
 import com.example.utilityapp.pages.ProfilePage
 import com.example.utilityapp.pages.SettingsPage
 
+import com.example.utilityapp.ui.theme.Worker
+
+import androidx.navigation.compose.rememberNavController
+import com.example.utilityapp.pages.WorkerCard
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(modifier: Modifier = Modifier) {
+fun MainScreen(modifier: Modifier = Modifier, navController: NavHostController) {
 
 
     val navItemList = listOf(
@@ -116,3 +124,43 @@ fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int) {
         }
     }
 }
+
+
+@Composable
+fun MainScreen(navController: NavHostController, authViewModel: AuthViewModel) {
+    val workers = listOf(
+        Worker("https://example.com/photo1.jpg", "John Doe", "Graphic Designer", "$50"),
+        Worker("https://example.com/photo2.jpg", "Jane Smith", "Web Developer", "$60"),
+        // Add more workers here
+    )
+
+
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewMainScreen() {
+    val navController = rememberNavController() // Create a local NavController for preview
+    MainScreen(navController = navController)
+}
+@Composable
+fun MainScreen(homePage: Unit) {
+    // Sample worker data
+    val worker = Worker(
+        name = "John Doe",
+        workType = "Electrician",
+        cost = "$20/hr",
+        photoUrl = "https://example.com/photo.jpg"
+    )
+
+    // Display the WorkerCard
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        WorkerCard(worker = worker)
+    }
+}
+
+
+
