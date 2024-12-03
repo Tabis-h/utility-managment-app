@@ -20,6 +20,7 @@ import com.example.utilityapp.R
 import com.example.utilityapp.pages.NotificationPage
 import com.example.utilityapp.pages.ProfilePage
 import SettingsPage
+import androidx.activity.ComponentActivity
 import com.example.utilityapp.ui.theme.Worker
 import com.example.utilityapp.pages.WorkerCard
 
@@ -122,3 +123,6 @@ fun PreviewMainScreen() {
     val navController = rememberNavController()
     MainScreen(navController = navController, authViewModel = AuthViewModel())
 }
+
+
+
