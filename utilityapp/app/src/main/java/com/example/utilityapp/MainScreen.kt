@@ -19,7 +19,7 @@ import com.example.utilityapp.Navitem
 import com.example.utilityapp.R
 import com.example.utilityapp.pages.NotificationPage
 import com.example.utilityapp.pages.ProfilePage
-import com.example.utilityapp.pages.SettingsPage
+import SettingsPage
 import com.example.utilityapp.ui.theme.Worker
 import com.example.utilityapp.pages.WorkerCard
 
@@ -103,8 +103,9 @@ fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int) {
 @Composable
 fun HomePage() {
     val workers = listOf(
-        Worker("https://example.com/photo1.jpg", "John Doe", "Graphic Designer", "$50"),
-        Worker("https://example.com/photo2.jpg", "Jane Smith", "Web Developer", "$60"),
+        Worker("https://example.com/photo1.jpg", "John Doe", "Plumber", "$50"),
+        Worker("https://example.com/photo2.jpg", "Jane Smith", "Labour", "$60"),
+
         // Add more workers as needed
     )
 

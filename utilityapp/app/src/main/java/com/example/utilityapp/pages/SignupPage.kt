@@ -47,7 +47,12 @@ fun SignupPage(modifier: Modifier = Modifier, navController: NavController, auth
     LaunchedEffect(authState.value) {
         when (authState.value) {
             is AuthState.Authenticated -> navController.navigate("home")
-            is AuthState.Error -> Toast.makeText(context, (authState.value as AuthState.Error).message, Toast.LENGTH_SHORT).show()
+            is AuthState.Error -> Toast.makeText(
+                context,
+                (authState.value as AuthState.Error).message,
+                Toast.LENGTH_SHORT
+            ).show()
+
             else -> Unit
         }
     }
@@ -61,81 +66,82 @@ fun SignupPage(modifier: Modifier = Modifier, navController: NavController, auth
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop // Scale the image to fill the entire background
         )
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Signup Page", fontSize = 32.sp)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // First Name Field
-        OutlinedTextField(
-            value = firstName,
-            onValueChange = { firstName = it },
-            label = { Text(text = "First Name") }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Last Name Field
-        OutlinedTextField(
-            value = lastName,
-            onValueChange = { lastName = it },
-            label = { Text(text = "Last Name") }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Email Field
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text(text = "Email") }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Mobile Number Field
-        OutlinedTextField(
-            value = mobileNumber,
-            onValueChange = { newText ->
-                // Only allow numbers as input
-                if (newText.all { it.isDigit() } && newText.length <= 10) {
-                    mobileNumber = newText
-                }
-            },
-            label = { Text(text = "Mobile Number") }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Password Field
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text(text = "Password") }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Signup Button
-        Button(
-            onClick = {
-                authViewModel.signup(firstName, lastName, email, password, mobileNumber)
-            },
-            enabled = authState.value != AuthState.Loading
+        Column(
+            modifier = modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Create Account")
-        }
+            Text(text = "Signup Page", fontSize = 32.sp)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // First Name Field
+            OutlinedTextField(
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = { Text(text = "First Name") }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Last Name Field
+            OutlinedTextField(
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = { Text(text = "Last Name") }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Email Field
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text(text = "Email") }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Mobile Number Field
+            OutlinedTextField(
+                value = mobileNumber,
+                onValueChange = { newText ->
+                    // Only allow numbers as input
+                    if (newText.all { it.isDigit() } && newText.length <= 10) {
+                        mobileNumber = newText
+                    }
+                },
+                label = { Text(text = "Mobile Number") }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Password Field
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text(text = "Password") }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Signup Button
+            Button(
+                onClick = {
+                    authViewModel.signup(firstName, lastName, email, password, mobileNumber)
+                },
+                enabled = authState.value != AuthState.Loading
+            ) {
+                Text(text = "Create Account")
+            }
 
 
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        TextButton(onClick = { navController.navigate("login") }) {
-            Text(text = "Already have an account? Login")
+            TextButton(onClick = { navController.navigate("login") }) {
+                Text(text = "Already have an account? Login")
+            }
         }
     }
-}}
+}

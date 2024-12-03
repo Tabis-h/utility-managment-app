@@ -4,11 +4,13 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -56,3 +58,48 @@ fun UtilityAppTheme(
         content = content
     )
 }
+
+
+// Define light and dark theme colors
+private val LightColorPalette = lightColors(
+    primary = Color(0xFF6200EE), // Replace with your primary color
+    primaryVariant = Color(0xFF3700B3),
+    secondary = Color(0xFF03DAC5)
+)
+
+fun lightColors(primary: Color, primaryVariant: Color, secondary: Color) {
+
+}
+
+
+private val DarkColorPalette = darkColors(
+    primary = Color(0xFFBB86FC),
+    primaryVariant = Color(0xFF3700B3),
+    secondary = Color(0xFF03DAC5)
+)
+
+fun darkColors(primary: Color, primaryVariant: Color, secondary: Color) {
+
+}
+
+
+    @Composable
+    fun UtilityAppTheme(
+        darkTheme: Boolean = isSystemInDarkTheme(),
+        content: @Composable () -> Unit
+    ) {
+        val colors = if (darkTheme) {
+            DarkColorPalette
+        } else {
+            LightColorPalette
+        }
+
+        MaterialTheme(
+
+            typography = Typography,
+
+            content = content
+        )
+    }
+
+

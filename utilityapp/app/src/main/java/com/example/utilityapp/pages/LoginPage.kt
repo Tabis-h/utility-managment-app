@@ -53,7 +53,12 @@ fun LoginPage(modifier: Modifier = Modifier, navController: NavController, authV
     LaunchedEffect(authState.value) {
         when (authState.value) {
             is AuthState.Authenticated -> navController.navigate("home")
-            is AuthState.Error -> Toast.makeText(context, (authState.value as AuthState.Error).message, Toast.LENGTH_SHORT).show()
+            is AuthState.Error -> Toast.makeText(
+                context,
+                (authState.value as AuthState.Error).message,
+                Toast.LENGTH_SHORT
+            ).show()
+
             else -> Unit
         }
     }
@@ -122,7 +127,7 @@ fun LoginPage(modifier: Modifier = Modifier, navController: NavController, authV
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Google logo image
                     Image(
-                        painter = painterResource(id = R.drawable.google_logo), // Replace with your image name
+                        painter = painterResource(id = R.drawable.default_profile_image), // Replace with your image name
                         contentDescription = "Google Logo",
                         modifier = Modifier.size(24.dp) // Adjust size as needed
                     )
@@ -137,4 +142,5 @@ fun LoginPage(modifier: Modifier = Modifier, navController: NavController, authV
                 Text(text = "Don't have an account? Sign up")
             }
         }
-    }}
+    }
+}
