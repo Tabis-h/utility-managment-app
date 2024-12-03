@@ -70,9 +70,12 @@ fun MainScreen(navController: NavHostController, authViewModel: AuthViewModel) {
 @Composable
 fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int) {
     // Example values for the profile page
-    val profileImage = painterResource(id = R.drawable.default_profile_image) // Replace with your own image resource
-    val username = "John Doe"
+    val profileImage = painterResource(id = R.drawable.default_profile_image) // Replace with your image resource
+    val firstName = "John"
+    val lastName = "Doe"
+    val phoneNumber = "+1234567890"
     val email = "john.doe@example.com"
+    val homeAddress = "123 Main St, Springfield, USA"
 
     // Define click actions
     val onEditProfileClick: () -> Unit = {
@@ -84,22 +87,27 @@ fun ContentScreen(modifier: Modifier = Modifier, selectedIndex: Int) {
         println("Logout clicked")
     }
 
+    // Determine which screen to display based on the selected index
     when (selectedIndex) {
         0 -> HomePage()
         1 -> NotificationPage()
         2 -> SettingsPage()
         3 -> {
-            // Pass parameters to ProfilePage
+            // Pass updated parameters to ProfilePage
             ProfilePage(
                 profileImage = profileImage,
-                username = username,
+                firstName = firstName,
+                lastName = lastName,
+                phoneNumber = phoneNumber,
                 email = email,
+                homeAddress = homeAddress,
                 onEditProfileClick = onEditProfileClick,
                 onLogoutClick = onLogoutClick
             )
         }
     }
 }
+
 
 @Composable
 fun HomePage() {
