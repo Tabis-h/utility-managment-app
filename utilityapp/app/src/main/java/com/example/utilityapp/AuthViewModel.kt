@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.utilityapp.ui.theme.Worker
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -46,6 +47,45 @@ class AuthViewModel : ViewModel() {
                 }
             }
     }
+
+    // Modify the signupWorker function accordingly
+    fun signupWorker(
+        firstName: String,
+        lastName: String,
+        email: String,
+        password: String,
+        mobileNumber: String,
+        workType: String,
+        photoUrl: String // photoUrl needs to match the class constructor
+    ) {
+        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || password.isEmpty() ||
+            mobileNumber.isEmpty() || workType.isEmpty() || photoUrl.isEmpty()) {
+            _authState.value = AuthState.Error("All fields must be filled")
+            return
+        }
+        _authState.value = AuthState.Loading
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    // Add worker details to the database
+                    val workerId = auth.currentUser?.uid
+                    val workerDetails = Worker(photoUrl, "$firstName $lastName", workType, mobileNumber) // Adjust constructor usage here
+                    workerId?.let {
+                        database.child("workers").child(it).setValue(workerDetails)
+                            .addOnCompleteListener { dbTask ->
+                                _authState.value = if (dbTask.isSuccessful) {
+                                    AuthState.Authenticated
+                                } else {
+                                    AuthState.Error(dbTask.exception?.message ?: "Database error")
+                                }
+                            }
+                    }
+                } else {
+                    _authState.value = AuthState.Error(task.exception?.message ?: "Worker signup failed")
+                }
+            }
+    }
+
 
     fun initializeGoogleSignIn(activity: Activity) {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)

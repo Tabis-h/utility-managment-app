@@ -33,13 +33,19 @@ import com.example.utilityapp.AuthViewModel
 import com.example.utilityapp.R
 
 @Composable
-fun SignupPage(modifier: Modifier = Modifier, navController: NavController, authViewModel: AuthViewModel) {
-
+fun SignupPage(
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    authViewModel: AuthViewModel
+) {
+    var isWorker by remember { mutableStateOf(false) } // State to toggle between user and worker
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var mobileNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var workType by remember { mutableStateOf("") } // Specific to workers
+    var workerPhoto by remember { mutableStateOf("") } // For worker photo URL or upload
 
     val authState = authViewModel.authState.observeAsState()
     val context = LocalContext.current
@@ -56,26 +62,28 @@ fun SignupPage(modifier: Modifier = Modifier, navController: NavController, auth
             else -> Unit
         }
     }
+
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // Background image
         Image(
-            painter = painterResource(id = R.drawable.pagebkg), // Replace with your image resource ID
+            painter = painterResource(id = R.drawable.pagebkg),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop // Scale the image to fill the entire background
+            contentScale = ContentScale.Crop
         )
         Column(
             modifier = modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Signup Page", fontSize = 32.sp)
+            Text(
+                text = if (isWorker) "Worker Signup" else "User Signup",
+                fontSize = 32.sp
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // First Name Field
             OutlinedTextField(
                 value = firstName,
                 onValueChange = { firstName = it },
@@ -84,7 +92,6 @@ fun SignupPage(modifier: Modifier = Modifier, navController: NavController, auth
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Last Name Field
             OutlinedTextField(
                 value = lastName,
                 onValueChange = { lastName = it },
@@ -93,7 +100,6 @@ fun SignupPage(modifier: Modifier = Modifier, navController: NavController, auth
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Email Field
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -102,11 +108,9 @@ fun SignupPage(modifier: Modifier = Modifier, navController: NavController, auth
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Mobile Number Field
             OutlinedTextField(
                 value = mobileNumber,
                 onValueChange = { newText ->
-                    // Only allow numbers as input
                     if (newText.all { it.isDigit() } && newText.length <= 10) {
                         mobileNumber = newText
                     }
@@ -116,31 +120,65 @@ fun SignupPage(modifier: Modifier = Modifier, navController: NavController, auth
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Password Field
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text(text = "Password") }
             )
 
+            if (isWorker) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = workType,
+                    onValueChange = { workType = it },
+                    label = { Text(text = "Work Type") }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = workerPhoto,
+                    onValueChange = { workerPhoto = it },
+                    label = { Text(text = "Photo URL") }
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Signup Button
             Button(
                 onClick = {
-                    authViewModel.signup(firstName, lastName, email, password, mobileNumber)
+                    if (isWorker) {
+                        // Handle worker signup
+                        authViewModel.signupWorker(
+                            firstName,
+                            lastName,
+                            email,
+                            password,
+                            mobileNumber,
+                            workType,
+                            workerPhoto
+                        )
+                    } else {
+                        // Handle user signup
+                        authViewModel.signup(firstName, lastName, email, password, mobileNumber)
+                    }
                 },
                 enabled = authState.value != AuthState.Loading
             ) {
                 Text(text = "Create Account")
             }
 
-
-
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(onClick = { navController.navigate("login") }) {
                 Text(text = "Already have an account? Login")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(onClick = { isWorker = !isWorker }) {
+                Text(text = if (isWorker) "Switch to User Signup" else "Switch to Worker Signup")
             }
         }
     }
