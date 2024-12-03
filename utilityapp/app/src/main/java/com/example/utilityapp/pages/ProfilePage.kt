@@ -30,8 +30,11 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ProfilePage(
     profileImage: Painter,
-    username: String,
+    firstName: String,
+    lastName: String,
+    phoneNumber: String,
     email: String,
+    homeAddress: String,
     onEditProfileClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
@@ -45,7 +48,7 @@ fun ProfilePage(
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
-
+        // Profile Image
         Image(
             painter = profileImage,
             contentDescription = "Profile Image",
@@ -58,22 +61,38 @@ fun ProfilePage(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Full Name
         Text(
-            text = username,
+            text = "$firstName $lastName",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
 
-
+        // Phone Number
         Text(
-            text = email,
+            text = "Phone: $phoneNumber",
             fontSize = 16.sp,
             color = Color.Gray
         )
 
+        // Email
+        Text(
+            text = "Email: $email",
+            fontSize = 16.sp,
+            color = Color.Gray
+        )
+
+        // Home Address
+        Text(
+            text = "Address: $homeAddress",
+            fontSize = 16.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+        )
+
         Spacer(modifier = Modifier.height(32.dp))
 
-
+        // Edit Profile Button
         Button(
             onClick = onEditProfileClick,
             modifier = Modifier.fillMaxWidth()
@@ -83,7 +102,7 @@ fun ProfilePage(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-
+        // Logout Button
         OutlinedButton(
             onClick = onLogoutClick,
             modifier = Modifier.fillMaxWidth()
