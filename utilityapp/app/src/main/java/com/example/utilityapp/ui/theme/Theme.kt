@@ -2,6 +2,9 @@ package com.example.utilityapp.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -12,6 +15,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
+
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import com.example.utilityapp.pages.RegistrationScreen
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -101,5 +109,52 @@ fun darkColors(primary: Color, primaryVariant: Color, secondary: Color) {
             content = content
         )
     }
+
+
+
+
+
+private val LightColors = lightColorScheme(
+    primary = Color(0xFF6200EE),
+    onPrimary = Color.White,
+    secondary = Color(0xFF03DAC5),
+    onSecondary = Color.Black,
+)
+
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFFBB86FC),
+    onPrimary = Color.Black,
+    secondary = Color(0xFF03DAC5),
+    onSecondary = Color.Black,
+)
+
+@Composable
+fun MyApplicationTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colors = if (darkTheme) DarkColors else LightColors
+
+    MaterialTheme(
+        colorScheme = colors,
+        typography = Typography,
+
+        content = content
+    )
+}
+
+class RegistrationActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            UtilityAppTheme {
+                RegistrationScreen()
+            }
+        }
+    }
+}
+
+
+
 
 
