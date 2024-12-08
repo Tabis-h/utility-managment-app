@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "987511977342",
+    "project_id": "utiliwise-9fe6f",
+    "storage_bucket": "utiliwise-9fe6f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:987511977342:android:617ba39ab4b94de12e6f2f",
+        "android_client_info": {
+          "package_name": "com.example.utiliwise"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhgiSCeb4qqZj-YhfTL-4Ybpwr5FckdYc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
