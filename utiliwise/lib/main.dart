@@ -1,23 +1,32 @@
-import 'package:firebase_core/firebase_core.dart';
-import 'package:utiliwise/src/home.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:utiliwise/src/home.dart';
+import 'package:utiliwise/src/login.dart';
 
-void main() async{
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const ProviderScope(child: MyApp()));
+void main() {
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: HomeView(),
+    return MaterialApp(
+      title: 'Utility App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: _getInitialScreen(),
     );
+  }
+
+  Widget _getInitialScreen() {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const LoginScreen(); // Navigate to login if not logged in
+    } else {
+      return const HomeView(); // Navigate to home if logged in
+    }
   }
 }
