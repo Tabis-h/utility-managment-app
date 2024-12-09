@@ -20,19 +20,10 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController workPriceController = TextEditingController(); // For work price
-  String selectedRole = "";
-  String selectedWorkType = ""; // For work type dropdown
+  final TextEditingController workPriceController = TextEditingController();
+  String selectedRole = ""; // Holds the selected role
+  String selectedWorkType = ""; // Holds the selected work type
   bool isLoading = false;
-
-  // List of work types for the dropdown
-  final List<String> workTypes = [
-    "Electrician",
-    "Plumber",
-    "Carpenter",
-    "Painter",
-    "Mechanic",
-  ];
 
   @override
   void dispose() {
@@ -43,23 +34,20 @@ class _SignupScreenState extends State<SignupScreen> {
     workPriceController.dispose();
   }
 
+  // Updated signupUser method with Firestore logic
   void signupUser() async {
     if (selectedRole.isEmpty) {
+      // Show an error if no role is selected
       showSnackBar(context, "Please select a role (User or Worker)");
       return;
     }
 
-    if (selectedRole == "Worker") {
-      if (workPriceController.text.isEmpty || selectedWorkType.isEmpty) {
-        showSnackBar(context, "Please fill all worker-specific fields");
-        return;
-      }
-    }
-
+    // Set isLoading to true
     setState(() {
       isLoading = true;
     });
 
+    // Signup user using AuthMethod
     String res = await AuthMethod().signupUser(
       email: emailController.text,
       password: passwordController.text,
@@ -67,16 +55,20 @@ class _SignupScreenState extends State<SignupScreen> {
       role: selectedRole,
     );
 
+    // Handle the response
     if (res == "success") {
       setState(() {
         isLoading = false;
       });
 
+      // After successful sign-up, store the user in the appropriate Firestore collection
       try {
         User? user = FirebaseAuth.instance.currentUser;
+
         if (user != null) {
           FirebaseFirestore firestore = FirebaseFirestore.instance;
 
+          // Store data based on role
           if (selectedRole == "Worker") {
             await firestore.collection('workers').doc(user.uid).set({
               'name': nameController.text,
@@ -119,9 +111,9 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     double height = MediaQuery.of(context).size.height;
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: SizedBox(
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -139,7 +131,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 icon: Icons.email,
                 textEditingController: emailController,
                 hintText: 'Enter your email',
-                textInputType: TextInputType.text,
+                textInputType: TextInputType.emailAddress,
               ),
               TextFieldInput(
                 icon: Icons.lock,
@@ -148,8 +140,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 textInputType: TextInputType.text,
                 isPass: true,
               ),
-
-              // Role Selection Buttons
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Column(
@@ -169,8 +159,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           onPressed: () {
                             setState(() {
                               selectedRole = "User";
-                              selectedWorkType = ""; // Reset worker fields
-                              workPriceController.clear();
                             });
                           },
                           style: ElevatedButton.styleFrom(
@@ -196,42 +184,41 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ],
                     ),
+                    if (selectedRole == "Worker") ...[
+                      const SizedBox(height: 10),
+                      TextFieldInput(
+                        icon: Icons.monetization_on,
+                        textEditingController: workPriceController,
+                        hintText: 'Enter work price',
+                        textInputType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: selectedWorkType.isEmpty ? null : selectedWorkType,
+                        items: ['Plumber', 'Electrician', 'Carpenter']
+                            .map((type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedWorkType = value!;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Work Type',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-
-              // Additional fields for Worker role
-              if (selectedRole == "Worker") ...[
-                TextFieldInput(
-                  icon: Icons.attach_money,
-                  textEditingController: workPriceController,
-                  hintText: 'Enter your work price',
-                  textInputType: TextInputType.number,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: DropdownButtonFormField<String>(
-                    value: selectedWorkType.isNotEmpty ? selectedWorkType : null,
-                    items: workTypes.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedWorkType = value ?? "";
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      labelText: "Select Work Type",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-              ],
-
-              MyButtons(onTap: signupUser, text: isLoading ? "Signing Up..." : "Sign Up"),
+              MyButtons(
+                onTap: signupUser,
+                text: isLoading ? "Signing Up..." : "Sign Up",
+              ),
               const SizedBox(height: 50),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
