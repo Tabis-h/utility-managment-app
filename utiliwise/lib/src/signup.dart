@@ -1,9 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../Services/authentication.dart';
 import '../Widget/button.dart';
 import '../Widget/snackbar.dart';
-
 import '../Widget/text_field.dart';
 import 'home.dart';
 import 'login.dart';
@@ -30,6 +31,7 @@ class _SignupScreenState extends State<SignupScreen> {
     nameController.dispose();
   }
 
+  // Updated signupUser method with Firestore logic
   void signupUser() async {
     if (selectedRole.isEmpty) {
       // Show an error if no role is selected
@@ -56,17 +58,52 @@ class _SignupScreenState extends State<SignupScreen> {
         isLoading = false;
       });
 
-      // Navigate to the next screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const HomeView(),
-        ),
-      );
+      // After successful sign-up, store the user in the appropriate Firestore collection
+      try {
+        // Get the current user
+        User? user = FirebaseAuth.instance.currentUser;
+
+        // Store user in Firestore based on their role
+        if (user != null) {
+          // Reference to the Firestore collection
+          FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+          // Check if the selected role is Worker
+          if (selectedRole == "Worker") {
+            // Store user data in the 'workers' collection
+            await firestore.collection('workers').doc(user.uid).set({
+              'name': nameController.text,
+              'email': emailController.text,
+              'role': 'Worker',
+              'uid': user.uid,
+            });
+          } else {
+            // Optionally, store in the 'users' collection (default case)
+            await firestore.collection('users').doc(user.uid).set({
+              'name': nameController.text,
+              'email': emailController.text,
+              'role': 'User',
+              'uid': user.uid,
+            });
+          }
+        }
+
+        // Navigate to the next screen (home screen)
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const HomeView(),
+          ),
+        );
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+        });
+        showSnackBar(context, e.toString());
+      }
     } else {
       setState(() {
         isLoading = false;
       });
-
       // Show error
       showSnackBar(context, res);
     }

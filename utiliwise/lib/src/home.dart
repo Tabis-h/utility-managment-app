@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:utiliwise/src/profile.dart';
-
-import 'kyc.dart'; // Import ProfilePage or implement it
 
 // Define the bottom navigation index provider
 final bottomNavIndexProvider = StateProvider((ref) => 0);
-
-
-
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -56,22 +52,72 @@ class HomeView extends StatelessWidget {
   }
 }
 
-// Sample Home Screen Widget
-class HomeScreen extends StatelessWidget {
+// Home Screen to display the list of workers from Firebase Firestore
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('workers').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return const Center(child: Text('Something went wrong.'));
+        }
+
+        final workers = snapshot.data!.docs;
+
+        // Shuffle the list of workers to display them randomly
+        workers.shuffle();
+
+        return ListView.builder(
+          itemCount: workers.length,
+          itemBuilder: (context, index) {
+            final worker = workers[index];
+
+            // Get worker data
+            final name = worker['name'];
+            final workPrice = worker['workPrice'];
+
+            return WorkerCard(
+              name: name,
+              workPrice: workPrice,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// Widget to display a worker's information
+class WorkerCard extends StatelessWidget {
+  final String name;
+  final String workPrice;
+
+  const WorkerCard({
+    required this.name,
+    required this.workPrice,
+    super.key,
+  });
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.home, size: 100, color: Colors.blue),
-          Text(
-            'Welcome to Home',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ],
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+      elevation: 5,
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: Colors.grey,
+          child: Icon(Icons.person, color: Colors.white),
+          radius: 30,
+        ),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('Work Price: \$' + workPrice),
       ),
     );
   }
@@ -97,24 +143,3 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
-class KYC extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("KYC Verification"),
-      ),
-      body: const Center(
-        child: Text(
-          "KYC Page",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-}
-
-
-
-
-
