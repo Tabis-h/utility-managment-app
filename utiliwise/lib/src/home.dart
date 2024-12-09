@@ -1,85 +1,37 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:utiliwise/src/login.dart';
-import 'package:utiliwise/src/profile.dart';  // Import your login screen
+import 'package:utiliwise/src/profile.dart'; // Import ProfilePage or implement it
 
+// Define the bottom navigation index provider
 final bottomNavIndexProvider = StateProvider((ref) => 0);
-
-void main() {
-  runApp(const ProviderScope(child: MyApp()));
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const AuthWrapper(),
-    );
-  }
-}
-
-// AuthWrapper widget to check if user is logged in or not
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),  // Listen for auth state changes
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());  // Show loading spinner while waiting for auth state
-        }
-        if (snapshot.hasData) {
-          return const HomeView();  // Show HomeView if user is logged in
-        } else {
-          return const LoginScreen();  // Show LoginScreen if user is not logged in
-        }
-      },
-    );
-  }
-}
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    print("Whole Page Built!");
     return Scaffold(
       appBar: AppBar(
         title: const Text("Dartbucket"),
+        centerTitle: true, // Center the title for a more balanced appearance
       ),
       body: Consumer(
         builder: (context, ref, child) {
-          print('Index Stack Built!');
+          // Watch the current navigation index state
           final currentIndex = ref.watch(bottomNavIndexProvider);
           return IndexedStack(
-            index: currentIndex,
+            index: currentIndex, // Show the selected screen
             children: const [
-              Center(
-                child: Icon(
-                  Icons.home,
-                  size: 100,
-                ),
-              ),
-              Center(
-                child: Icon(
-                  Icons.settings,
-                  size: 100,
-                ),
-              ),
-              const ProfilePage(),
+              HomeScreen(), // Custom widget for the Home tab
+              SettingsScreen(), // Custom widget for the Settings tab
+              ProfilePage(), // Profile tab
             ],
           );
         },
       ),
       bottomNavigationBar: Consumer(
         builder: (context, ref, child) {
+          // Watch the navigation index to update the bottom navigation bar
           final currentIndex = ref.watch(bottomNavIndexProvider);
           return NavigationBar(
             selectedIndex: currentIndex,
@@ -89,10 +41,53 @@ class HomeView extends StatelessWidget {
               NavigationDestination(icon: Icon(Icons.account_box), label: 'Profile'),
             ],
             onDestinationSelected: (value) {
+              // Update the navigation index state when a tab is selected
               ref.read(bottomNavIndexProvider.notifier).update((state) => value);
             },
           );
         },
+      ),
+    );
+  }
+}
+
+// Sample Home Screen Widget
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.home, size: 100, color: Colors.blue),
+          Text(
+            'Welcome to Home',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Sample Settings Screen Widget
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.settings, size: 100, color: Colors.green),
+          Text(
+            'Settings Page',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
