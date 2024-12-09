@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:utiliwise/src/profile.dart'; // Import ProfilePage or implement it
+import 'package:utiliwise/src/profile.dart';
+
+import 'kyc.dart'; // Import ProfilePage or implement it
 
 // Define the bottom navigation index provider
 final bottomNavIndexProvider = StateProvider((ref) => 0);
+
+
+
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -92,3 +97,24 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
+class KYC extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("KYC Verification"),
+      ),
+      body: const Center(
+        child: Text(
+          "KYC Page",
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
+

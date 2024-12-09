@@ -11,6 +11,7 @@ class AuthMethod {
     required String email,
     required String password,
     required String name,
+    required String role,
   }) async {
     String res = "Some error Occurred";
     try {
@@ -66,3 +67,4 @@ class AuthMethod {
     // await _auth.signOut();
   }
 }
+
