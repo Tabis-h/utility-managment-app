@@ -16,14 +16,22 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _workTypeController = TextEditingController();
   bool _isEditing = false;
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
+  String _userType = 'user'; // Default to 'user'
+  final List<String> _workTypes = ['Plumber', 'Electrician', 'Mechanical', 'Labour']; // Work types for worker
 
   @override
   void dispose() {
     _mobileController.dispose();
     _addressController.dispose();
+    _emailController.dispose();
+    _priceController.dispose();
+    _workTypeController.dispose();
     super.dispose();
   }
 
@@ -36,23 +44,19 @@ class _ProfilePageState extends State<ProfilePage> {
       DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
 
       if (doc.exists) {
-        // Safely check for field existence before accessing them
         var data = doc.data() as Map<String, dynamic>?;
+
+        // Check if user is a worker
+        _userType = data != null && data.containsKey('userType') ? data['userType'] : 'user';
 
         return {
           'name': data != null && data.containsKey('name') ? data['name'] : 'No name available',
           'email': data != null && data.containsKey('email') ? data['email'] : 'No email available',
           'mobile': data != null && data.containsKey('mobile') ? data['mobile'] : 'No mobile available',
           'address': data != null && data.containsKey('address') ? data['address'] : 'No address available',
-          'photoUrl': data != null && data.containsKey('photoUrl') ? data['photoUrl'] : '',  // Add photoUrl field
-        };
-      } else {
-        return {
-          'name': 'No name available',
-          'email': 'No email available',
-          'mobile': 'No mobile available',
-          'address': 'No address available',
-          'photoUrl': '',  // Add empty photoUrl
+          'photoUrl': data != null && data.containsKey('photoUrl') ? data['photoUrl'] : '',
+          'price': data != null && data.containsKey('price') ? data['price'] : '',
+          'workType': data != null && data.containsKey('workType') ? data['workType'] : '',
         };
       }
     }
@@ -62,21 +66,24 @@ class _ProfilePageState extends State<ProfilePage> {
       'email': 'No email available',
       'mobile': 'No mobile available',
       'address': 'No address available',
-      'photoUrl': '',  // Add empty photoUrl
+      'photoUrl': '',
+      'price': '',
+      'workType': '',
     };
   }
 
   // Update user profile data in Firestore
-  Future<void> updateProfile(String mobile, String address) async {
+  Future<void> updateProfile(String mobile, String address, String price, String workType) async {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'mobile': mobile,
         'address': address,
+        'price': price,
+        'workType': workType,
       });
 
-      // Update state to stop editing
       setState(() {
         _isEditing = false;
       });
@@ -108,13 +115,11 @@ class _ProfilePageState extends State<ProfilePage> {
           TaskSnapshot snapshot = await uploadTask;
           String downloadUrl = await snapshot.ref.getDownloadURL();
 
-          // Update Firestore with the profile image URL
           await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
             'photoUrl': downloadUrl,
           });
 
           setState(() {
-            // Update profile image URL
             user.updateProfile(photoURL: downloadUrl);
           });
         } catch (e) {
@@ -202,12 +207,36 @@ class _ProfilePageState extends State<ProfilePage> {
                           decoration: const InputDecoration(labelText: 'Address'),
                           maxLength: 50, // Max length for address
                         ),
+                        if (_userType == 'worker') ...[
+                          TextField(
+                            controller: _priceController..text = userProfile['price']!,
+                            decoration: const InputDecoration(labelText: 'Work Price'),
+                            keyboardType: TextInputType.number,
+                          ),
+                          DropdownButtonFormField<String>(
+                            value: userProfile['workType']!,
+                            decoration: const InputDecoration(labelText: 'Work Type'),
+                            items: _workTypes.map((String workType) {
+                              return DropdownMenuItem<String>(
+                                value: workType,
+                                child: Text(workType),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                _workTypeController.text = value;
+                              }
+                            },
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () {
                             updateProfile(
                               _mobileController.text,
                               _addressController.text,
+                              _priceController.text,
+                              _workTypeController.text,
                             );
                           },
                           child: const Text('Save'),
@@ -225,23 +254,36 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: const TextStyle(fontSize: 16),
                         ),
                         const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _isEditing = true;
-                            });
-                          },
-                          child: const Text('Edit Profile'),
-                        ),
+                        if (_userType == 'worker') ...[
+                          Text(
+                            'Price: ${userProfile['price']}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          Text(
+                            'Work Type: ${userProfile['workType']}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ],
                       ],
                     ),
-
                     const SizedBox(height: 20),
 
-                    // Logout button
+                    // Edit button
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = !_isEditing;
+                        });
+                      },
+                      child: Text(_isEditing ? 'Cancel Edit' : 'Edit Profile'),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Logout Button
                     ElevatedButton(
                       onPressed: _logout,
-                      child: const Text('Log Out'),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: const Text('Logout'),
                     ),
                   ],
                 ),
