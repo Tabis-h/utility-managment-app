@@ -7,42 +7,64 @@ import 'package:utiliwise/src/profile.dart';
 final bottomNavIndexProvider = StateProvider((ref) => 0);
 
 class HomeView extends StatelessWidget {
-  const HomeView({super.key});
+  final String userType;
+
+  const HomeView({
+    super.key,
+    required this.userType,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Dartbucket"),
-        centerTitle: true, // Center the title for a more balanced appearance
+        title: const Text(
+          "Utiliwise",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        elevation: 2,
       ),
       body: Consumer(
         builder: (context, ref, child) {
-          // Watch the current navigation index state
           final currentIndex = ref.watch(bottomNavIndexProvider);
           return IndexedStack(
-            index: currentIndex, // Show the selected screen
-            children: const [
-              HomeScreen(), // Custom widget for the Home tab
-              SettingsScreen(), // Custom widget for the Settings tab
-              ProfilePage(), // Profile tab
+            index: currentIndex,
+            children: [
+              userType == 'worker'
+                  ? const WorkerHomeScreen()
+                  : const UserHomeScreen(),
+              const SettingsScreen(),
+              ProfilePage(userType: userType),
             ],
           );
         },
       ),
       bottomNavigationBar: Consumer(
         builder: (context, ref, child) {
-          // Watch the navigation index to update the bottom navigation bar
           final currentIndex = ref.watch(bottomNavIndexProvider);
           return NavigationBar(
             selectedIndex: currentIndex,
+            elevation: 8,
+            backgroundColor: Colors.white,
             destinations: const [
-              NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-              NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
-              NavigationDestination(icon: Icon(Icons.account_box), label: 'Profile'),
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'Settings',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
             ],
             onDestinationSelected: (value) {
-              // Update the navigation index state when a tab is selected
               ref.read(bottomNavIndexProvider.notifier).update((state) => value);
             },
           );
@@ -52,93 +74,330 @@ class HomeView extends StatelessWidget {
   }
 }
 
-// Home Screen to display the list of workers from Firebase Firestore
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+class WorkerHomeScreen extends ConsumerWidget {
+  const WorkerHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('workers').snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Worker Dashboard',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildStatsCard(),
+          const SizedBox(height: 20),
+          _buildActiveJobsList(),
+        ],
+      ),
+    );
+  }
 
-        if (snapshot.hasError) {
-          return const Center(child: Text('Something went wrong.'));
-        }
+  Widget _buildStatsCard() {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildStatItem(Icons.work, '5', 'Active Jobs'),
+            _buildStatItem(Icons.star, '4.8', 'Rating'),
+            _buildStatItem(Icons.payment, '\$520', 'Earnings'),
+          ],
+        ),
+      ),
+    );
+  }
 
-        final workers = snapshot.data!.docs;
+  Widget _buildStatItem(IconData icon, String value, String label) {
+    return Column(
+      children: [
+        Icon(icon, size: 30, color: Colors.blue),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(label),
+      ],
+    );
+  }
 
-        // Shuffle the list of workers to display them randomly
-        workers.shuffle();
-
-        return ListView.builder(
-          itemCount: workers.length,
+  Widget _buildActiveJobsList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Active Jobs',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 3,
           itemBuilder: (context, index) {
-            final worker = workers[index];
-
-            // Get worker data
-            final name = worker['name'];
-            final workPrice = worker['workPrice'];
-
-            return WorkerCard(
-              name: name,
-              workPrice: workPrice,
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.work),
+                ),
+                title: Text('Job #${index + 1}'),
+                subtitle: const Text('In Progress'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  // Handle job details navigation
+                },
+              ),
             );
           },
-        );
-      },
+        ),
+      ],
     );
   }
 }
 
-// Widget to display a worker's information
+class UserHomeScreen extends ConsumerWidget {
+  const UserHomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      children: [
+        _buildSearchBar(),
+        _buildCategoryFilter(),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('workers').snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return const Center(child: Text('Something went wrong'));
+              }
+
+              final workers = snapshot.data!.docs;
+              workers.shuffle();
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: workers.length,
+                itemBuilder: (context, index) {
+                  final worker = workers[index];
+                  return WorkerCard(
+                    name: worker['name'],
+                    workPrice: worker['workPrice'],
+                    workType: worker['workType'],
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'Search workers...',
+          prefixIcon: const Icon(Icons.search),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          filled: true,
+          fillColor: Colors.grey[100],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilter() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _buildFilterChip('All'),
+          _buildFilterChip('Plumber'),
+          _buildFilterChip('Electrician'),
+          _buildFilterChip('Mechanic'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        onSelected: (bool selected) {
+          // Handle filter selection
+        },
+      ),
+    );
+  }
+}
+
 class WorkerCard extends StatelessWidget {
   final String name;
   final String workPrice;
+  final String workType;
 
   const WorkerCard({
     required this.name,
     required this.workPrice,
+    required this.workType,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-      elevation: 5,
-      child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: Colors.grey,
-          child: Icon(Icons.person, color: Colors.white),
-          radius: 30,
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 4,
+      child: InkWell(
+        onTap: () {
+          // Handle worker selection
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 35,
+                backgroundColor: Colors.blue.shade100,
+                child: Text(
+                  name[0].toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.work, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          workType,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(Icons.attach_money, size: 16, color: Colors.grey[600]),
+                        Text(
+                          workPrice,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.star, size: 16, color: Colors.amber),
+                        const Text(' 4.8 (124 reviews)'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('Work Price: \$' + workPrice),
       ),
     );
   }
 }
 
-// Sample Settings Screen Widget
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.settings, size: 100, color: Colors.green),
-          Text(
-            'Settings Page',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Settings',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
+        const SizedBox(height: 20),
+        _buildSettingsTile(
+          icon: Icons.notifications,
+          title: 'Notifications',
+          subtitle: 'Manage notification preferences',
+        ),
+        _buildSettingsTile(
+          icon: Icons.lock,
+          title: 'Privacy',
+          subtitle: 'Control your privacy settings',
+        ),
+        _buildSettingsTile(
+          icon: Icons.help,
+          title: 'Help & Support',
+          subtitle: 'Get help or contact support',
+        ),
+        _buildSettingsTile(
+          icon: Icons.info,
+          title: 'About',
+          subtitle: 'App information and version',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: () {
+          // Handle settings navigation
+        },
       ),
     );
   }

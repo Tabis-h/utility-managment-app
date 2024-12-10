@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../Services/authentication.dart';
 import '../Widget/snackbar.dart';
 import '../Widget/text_field.dart';
 import '../Widget/button.dart';
 import 'home.dart';
+import 'worker_dashboard.dart';
 import 'signup.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -18,106 +20,203 @@ class _SignupScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
+  bool isWorker = false;
 
   @override
   void dispose() {
-    super.dispose();
     emailController.dispose();
     passwordController.dispose();
+    super.dispose();
   }
 
-  // Email and password auth part
   void loginUser() async {
+    if (!mounted) return;
+
     setState(() {
       isLoading = true;
     });
-    // Login user using our AuthMethod
-    String res = await AuthMethod().loginUser(
-        email: emailController.text, password: passwordController.text);
 
-    if (res == "success") {
-      setState(() {
-        isLoading = false;
-      });
-      // Navigate to the home screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const HomeView(),
-        ),
+    try {
+      String res = await AuthMethod().loginUser(
+        email: emailController.text,
+        password: passwordController.text,
       );
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-      // Show error
-      showSnackBar(context, res);
+
+      if (res == "success") {
+        final User? currentUser = FirebaseAuth.instance.currentUser;
+
+        if (currentUser != null) {
+          final workerDoc = await FirebaseFirestore.instance
+              .collection('workers')
+              .doc(currentUser.uid)
+              .get();
+
+          final isWorkerAccount = workerDoc.exists;
+
+          if (!mounted) return;
+
+          if (isWorker && isWorkerAccount) {
+            Navigator.pushReplacementNamed(context, '/worker-dashboard');
+          } else if (!isWorker && !isWorkerAccount) {
+            Navigator.pushReplacementNamed(context, '/home');
+          } else {
+            await FirebaseAuth.instance.signOut();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please select the correct account type')),
+            );
+          }
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res)),
+        );
+      }
+    } catch (e) {
+      print('Login error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login failed')),
+      );
     }
+
+    if (!mounted) return;
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    double height = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(  // Added scrollable functionality
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: height / 2.7,
-                child: Image.asset('images/login.jpg'),
-              ),
-              TextFieldInput(
-                icon: Icons.person,
-                textEditingController: emailController,
-                hintText: 'Enter your email',
-                textInputType: TextInputType.text,
-              ),
-              TextFieldInput(
-                icon: Icons.lock,
-                textEditingController: passwordController,
-                hintText: 'Enter your password',
-                textInputType: TextInputType.text,
-                isPass: true,
-              ),
-              // Forgot password widget (optional, if you have one)
-              MyButtons(onTap: loginUser, text: "Log In"),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(height: 1, color: Colors.black26),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 60),
+                Icon(
+                  Icons.handyman,
+                  size: 80,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(height: 20),
+
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  const Text("  or  "),
-                  Expanded(
-                    child: Container(height: 1, color: Colors.black26),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => isWorker = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: !isWorker ? Theme.of(context).primaryColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              'User',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: !isWorker ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => isWorker = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isWorker ? Theme.of(context).primaryColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              'Worker',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: isWorker ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              // Sign-up navigation
-              Padding(
-                padding: const EdgeInsets.only(top: 10, left: 100),
-                child: Row(
+                ),
+
+                Text(
+                  'Login as ${isWorker ? 'Worker' : 'User'}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 30),
+
+                TextFieldInput(
+                  icon: Icons.email,
+                  textEditingController: emailController,
+                  hintText: 'Email address',
+                  textInputType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                TextFieldInput(
+                  icon: Icons.lock,
+                  textEditingController: passwordController,
+                  hintText: 'Password',
+                  textInputType: TextInputType.text,
+                  isPass: true,
+                ),
+                const SizedBox(height: 24),
+
+                if (isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  MyButtons(
+                    onTap: loginUser,
+                    text: "Log In as ${isWorker ? 'Worker' : 'User'}",
+                  ),
+
+                const SizedBox(height: 20),
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don't have an account? "),
+                    Text(
+                      "Don't have an account? ",
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const SignupScreen(),
-                          ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SignupScreen()),
                         );
                       },
-                      child: const Text(
-                        "SignUp",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      child: Text(
+                        "Sign Up",
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

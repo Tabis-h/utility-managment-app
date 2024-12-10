@@ -1,253 +1,326 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final String userType; // 'user' or 'worker'
+  const ProfilePage({super.key, required this.userType});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final TextEditingController _mobileController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _workTypeController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  late User _user;
+  bool _isLoading = true;
   bool _isEditing = false;
-  File? _profileImage;
-  final ImagePicker _picker = ImagePicker();
-  String _userType = 'user'; // Default user type
-  final List<String> _workTypes = ['Plumber', 'Electrician', 'Mechanical', 'Labour'];
+
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _mobileController;
+
+  // Worker-specific controllers
+  late TextEditingController _workPriceController;
+  String? _selectedWorkType;
+  final List<String> _workTypes = ['Plumber', 'Electrician', 'Mechanic'];
+
+  // User-specific controller
+  late TextEditingController _addressController;
 
   @override
-  void dispose() {
-    _mobileController.dispose();
-    _addressController.dispose();
-    _priceController.dispose();
-    _workTypeController.dispose();
-    super.dispose();
-  }
+  void initState() {
+    super.initState();
+    _user = _auth.currentUser!;
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _mobileController = TextEditingController();
 
-  // Fetch user data from Firestore
-  Future<Map<String, String>> getUserProfile() async {
-    User? user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      DocumentSnapshot doc =
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-
-      if (doc.exists) {
-        var data = doc.data() as Map<String, dynamic>?;
-
-        _userType = data != null && data.containsKey('userType') ? data['userType'] : 'user';
-
-        return {
-          'name': data != null && data.containsKey('name') ? data['name'] : 'No name available',
-          'email': data != null && data.containsKey('email') ? data['email'] : 'No email available',
-          'mobile': data != null && data.containsKey('mobile') ? data['mobile'] : 'No mobile available',
-          'address': data != null && data.containsKey('address') ? data['address'] : 'No address available',
-          'photoUrl': data != null && data.containsKey('photoUrl') ? data['photoUrl'] : '',
-          'price': data != null && data.containsKey('price') ? data['price'] : '',
-          'workType': data != null && data.containsKey('workType') ? data['workType'] : '',
-        };
-      }
+    if (widget.userType == 'worker') {
+      _workPriceController = TextEditingController();
+    } else {
+      _addressController = TextEditingController();
     }
 
-    return {
-      'name': 'No name available',
-      'email': 'No email available',
-      'mobile': 'No mobile available',
-      'address': 'No address available',
-      'photoUrl': '',
-      'price': '',
-      'workType': '',
-    };
+    _loadProfileData();
   }
 
-  // Update user profile data in Firestore
-  Future<void> updateProfile(String mobile, String address, String price, String workType) async {
-    User? user = FirebaseAuth.instance.currentUser;
+  void _loadProfileData() async {
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection(widget.userType == 'worker' ? 'workers' : 'users')
+          .doc(_user.uid)
+          .get();
 
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'mobile': mobile,
-        'address': address,
-        if (_userType == 'worker') ...{
-          'price': price,
-          'workType': workType,
-        },
-      });
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data()!;
+        _nameController.text = data['name'] ?? '';
+        _emailController.text = data['email'] ?? '';
+        _mobileController.text = data['mobile'] ?? '';
 
+        if (widget.userType == 'worker') {
+          _workPriceController.text = data['workPrice'] ?? '';
+          _selectedWorkType = data['workType'];
+        } else {
+          _addressController.text = data['address'] ?? '';
+        }
+      }
+    } catch (e) {
+      print('Error loading profile data: $e');
+    } finally {
       setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _saveProfileData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final Map<String, dynamic> profileData = {
+        'name': _nameController.text,
+        'email': _emailController.text,
+        'mobile': _mobileController.text,
+      };
+
+      if (widget.userType == 'worker') {
+        profileData.addAll({
+          'workPrice': _workPriceController.text,
+          'workType': _selectedWorkType,
+        });
+      } else {
+        profileData['address'] = _addressController.text;
+      }
+
+      await FirebaseFirestore.instance
+          .collection(widget.userType == 'worker' ? 'workers' : 'users')
+          .doc(_user.uid)
+          .set(profileData);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error updating profile')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
         _isEditing = false;
       });
     }
   }
 
-  // Logout user
-  Future<void> _logout() async {
+  void _handleLogout() async {
     await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        enabled: _isEditing, // Enable editing based on your state variable
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          filled: true,
+          fillColor: _isEditing ? Colors.white : Colors.grey[100],
+        ),
+      ),
+    );
+  }
+
+// [Previous imports and class declarations remain the same]
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, String>>(
-      future: getUserProfile(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        if (!snapshot.hasData || snapshot.data == null) {
-          return const Center(child: Text('No profile data found.'));
-        }
-
-        var userProfile = snapshot.data!;
-        String photoUrl = userProfile['photoUrl'] ?? '';
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Profile'),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Center(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        title: Text(
+          '${widget.userType == 'worker' ? 'Worker' : 'User'} Profile',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 30),
+                width: double.infinity,
+                color: Colors.white,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: () {}, // Add functionality to update profile picture if needed
-                      child: CircleAvatar(
-                        radius: 60,
-                        backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                        child: photoUrl.isEmpty
-                            ? const Icon(Icons.camera_alt, size: 40, color: Colors.white)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    Text(
-                      'Name: ${userProfile['name']}',
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    Text(
-                      'Email: ${userProfile['email']}',
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(height: 20),
-
-                    _isEditing
-                        ? Column(
-                            children: [
-                              TextField(
-                                controller: _mobileController..text = userProfile['mobile']!,
-                                decoration: const InputDecoration(labelText: 'Mobile Number'),
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [
-                                  LengthLimitingTextInputFormatter(10),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 60,
+                          backgroundImage: const AssetImage('assets/images/as.png'),
+                          child: Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    spreadRadius: 1,
+                                    blurRadius: 5,
+                                  )
                                 ],
                               ),
-                              TextField(
-                                controller: _addressController..text = userProfile['address']!,
-                                decoration: const InputDecoration(labelText: 'Address'),
-                                maxLength: 50,
-                              ),
-                              if (_userType == 'worker') ...[
-                                TextField(
-                                  controller: _priceController..text = userProfile['price']!,
-                                  decoration: const InputDecoration(labelText: 'Work Price'),
-                                  keyboardType: TextInputType.number,
+                              child: IconButton(
+                                icon: Icon(
+                                  Icons.camera_alt,
+                                  size: 20,
+                                  color: Colors.black,
                                 ),
-                                DropdownButtonFormField<String>(
-                                  value: _workTypeController.text.isEmpty
-                                      ? userProfile['workType']!
-                                      : _workTypeController.text,
-                                  decoration: const InputDecoration(labelText: 'Work Type'),
-                                  items: _workTypes.map((String workType) {
-                                    return DropdownMenuItem<String>(
-                                      value: workType,
-                                      child: Text(workType),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      _workTypeController.text = value;
-                                    }
-                                  },
-                                ),
-                              ],
-                              const SizedBox(height: 20),
-                              ElevatedButton(
                                 onPressed: () {
-                                  updateProfile(
-                                    _mobileController.text,
-                                    _addressController.text,
-                                    _priceController.text,
-                                    _workTypeController.text,
-                                  );
+                                  // Add image picker functionality
                                 },
-                                child: const Text('Save'),
                               ),
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              Text(
-                                'Mobile: ${userProfile['mobile']}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              Text(
-                                'Address: ${userProfile['address']}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              if (_userType == 'worker') ...[
-                                Text(
-                                  'Price: ${userProfile['price']}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                Text(
-                                  'Work Type: ${userProfile['workType']}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
-                              const SizedBox(height: 20),
-                              ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _isEditing = true;
-                                  });
-                                },
-                                child: const Text('Edit Profile'),
-                              ),
-                            ],
+                            ),
                           ),
-
-                    const SizedBox(height: 20),
-
-                    ElevatedButton(
-                      onPressed: _logout,
-                      child: const Text('Log Out'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    Text(
+                      _nameController.text,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _emailController.text,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Personal Information',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              if (_isEditing) {
+                                _saveProfileData();
+                              } else {
+                                setState(() {
+                                  _isEditing = true;
+                                });
+                              }
+                            },
+                            child: Text(
+                              _isEditing ? 'Save' : 'Edit',
+                              style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      const SizedBox(height: 20),
+                      // Existing TextField widgets
+                      _buildTextField(
+                        controller: _nameController,
+                        label: 'Name',
+                        icon: Icons.person,
+                      ),
+                      _buildTextField(
+                        controller: _emailController,
+                        label: 'Email',
+                        icon: Icons.email,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      _buildTextField(
+                        controller: _mobileController,
+                        label: 'Mobile Number',
+                        icon: Icons.phone,
+                        keyboardType: TextInputType.phone,
+                      ),
+                      // Worker/User specific fields
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _handleLogout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
-}
 
+}
