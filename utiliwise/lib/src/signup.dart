@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:utiliwise/worker/worker_dashboard.dart';
 
 import '../Services/authentication.dart';
 import '../Widget/button.dart';
@@ -80,6 +81,12 @@ class _SignupScreenState extends State<SignupScreen> {
               'uid': user.uid,
               'workPrice': workPriceController.text,
               'workType': selectedWorkType,
+              'kyc': {
+                'status': 'not_submitted',
+                'documentType': '',
+                'documentUrl': '',
+                'selfieUrl': '',
+              }
             });
           } else {
             await firestore.collection('users').doc(user.uid).set({
@@ -93,7 +100,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const HomeView(userType: 'userType',),
+            builder: (context) => selectedRole == "Worker"
+                ? const WorkerDashboard()
+                : HomeView(userType: selectedRole.toLowerCase()),
           ),
         );
       } catch (e) {
@@ -111,6 +120,45 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   @override
+
+  Widget _buildRoleToggle(String role, IconData icon) {
+    bool isSelected = selectedRole == role;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedRole = role;
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.transparent,
+          borderRadius: BorderRadius.horizontal(
+            left: role == "User" ? Radius.circular(25) : Radius.zero,
+            right: role == "Worker" ? Radius.circular(25) : Radius.zero,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? Colors.white : Colors.grey,
+            ),
+            SizedBox(width: 8),
+            Text(
+              role,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget build(BuildContext context) {
     double height = MediaQuery.of(context).size.height;
     return Scaffold(
@@ -130,35 +178,23 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedRole = "User";
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                        selectedRole == "User" ? Colors.blue : Colors.grey,
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildRoleToggle("User", Icons.person),
+                      Container(
+                        width: 1,
+                        height: 36,
+                        color: Colors.grey.shade300,
                       ),
-                      child: const Text("User"),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedRole = "Worker";
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                        selectedRole == "Worker" ? Colors.blue : Colors.grey,
-                      ),
-                      child: const Text("Worker"),
-                    ),
-                  ],
+                      _buildRoleToggle("Worker", Icons.work),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 20),
                 TextFieldInput(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class ProfilePage extends StatefulWidget {
-  final String userType; // 'user' or 'worker'
-  const ProfilePage({super.key, required this.userType});
+  const ProfilePage({super.key});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -19,13 +19,6 @@ class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _mobileController;
-
-  // Worker-specific controllers
-  late TextEditingController _workPriceController;
-  String? _selectedWorkType;
-  final List<String> _workTypes = ['Plumber', 'Electrician', 'Mechanic'];
-
-  // User-specific controller
   late TextEditingController _addressController;
 
   @override
@@ -35,20 +28,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _nameController = TextEditingController();
     _emailController = TextEditingController();
     _mobileController = TextEditingController();
-
-    if (widget.userType == 'worker') {
-      _workPriceController = TextEditingController();
-    } else {
-      _addressController = TextEditingController();
-    }
-
+    _addressController = TextEditingController();
     _loadProfileData();
   }
 
   void _loadProfileData() async {
     try {
       final docSnapshot = await FirebaseFirestore.instance
-          .collection(widget.userType == 'worker' ? 'workers' : 'users')
+          .collection('users')
           .doc(_user.uid)
           .get();
 
@@ -57,13 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _nameController.text = data['name'] ?? '';
         _emailController.text = data['email'] ?? '';
         _mobileController.text = data['mobile'] ?? '';
-
-        if (widget.userType == 'worker') {
-          _workPriceController.text = data['workPrice'] ?? '';
-          _selectedWorkType = data['workType'];
-        } else {
-          _addressController.text = data['address'] ?? '';
-        }
+        _addressController.text = data['address'] ?? '';
       }
     } catch (e) {
       print('Error loading profile data: $e');
@@ -84,19 +65,11 @@ class _ProfilePageState extends State<ProfilePage> {
         'name': _nameController.text,
         'email': _emailController.text,
         'mobile': _mobileController.text,
+        'address': _addressController.text,
       };
 
-      if (widget.userType == 'worker') {
-        profileData.addAll({
-          'workPrice': _workPriceController.text,
-          'workType': _selectedWorkType,
-        });
-      } else {
-        profileData['address'] = _addressController.text;
-      }
-
       await FirebaseFirestore.instance
-          .collection(widget.userType == 'worker' ? 'workers' : 'users')
+          .collection('users')
           .doc(_user.uid)
           .set(profileData);
 
@@ -121,20 +94,23 @@ class _ProfilePageState extends State<ProfilePage> {
       Navigator.pushReplacementNamed(context, '/login');
     }
   }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     int maxLines = 1,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
-        enabled: _isEditing, // Enable editing based on your state variable
+        enabled: _isEditing,
         keyboardType: keyboardType,
         maxLines: maxLines,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
@@ -148,8 +124,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-// [Previous imports and class declarations remain the same]
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,9 +132,9 @@ class _ProfilePageState extends State<ProfilePage> {
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-        title: Text(
-          '${widget.userType == 'worker' ? 'Worker' : 'User'} Profile',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        title: const Text(
+          'Profile',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: _isLoading
@@ -182,31 +156,27 @@ class _ProfilePageState extends State<ProfilePage> {
                         CircleAvatar(
                           radius: 60,
                           backgroundImage: const AssetImage('assets/images/as.png'),
-                          child: Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    spreadRadius: 1,
-                                    blurRadius: 5,
-                                  )
-                                ],
-                              ),
-                              child: IconButton(
-                                icon: Icon(
-                                  Icons.camera_alt,
-                                  size: 20,
-                                  color: Colors.black,
-                                ),
-                                onPressed: () {
-                                  // Add image picker functionality
-                                },
-                              ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  spreadRadius: 1,
+                                  blurRadius: 5,
+                                )
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 20,
+                              color: Theme.of(context).primaryColor,
                             ),
                           ),
                         ),
@@ -244,11 +214,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Personal Information',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                          const Flexible(
+                            child: Text(
+                              'Personal Information',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           TextButton(
@@ -272,7 +245,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const Divider(),
                       const SizedBox(height: 20),
-                      // Existing TextField widgets
                       _buildTextField(
                         controller: _nameController,
                         label: 'Name',
@@ -284,33 +256,41 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.email,
                         keyboardType: TextInputType.emailAddress,
                       ),
+                      // Inside the Card's Column children, replace the existing mobile TextField with:
                       _buildTextField(
                         controller: _mobileController,
                         label: 'Mobile Number',
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
                       ),
-                      // Worker/User specific fields
+
+                      _buildTextField(
+                        controller: _addressController,
+                        label: 'Address',
+                        icon: Icons.location_on,
+                        maxLines: 3,
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _handleLogout,
-                    icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _handleLogout,
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Logout'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
@@ -323,4 +303,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _mobileController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
 }

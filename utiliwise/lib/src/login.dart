@@ -6,7 +6,7 @@ import '../Widget/snackbar.dart';
 import '../Widget/text_field.dart';
 import '../Widget/button.dart';
 import 'home.dart';
-import 'worker_dashboard.dart';
+import '../worker/worker_dashboard.dart';
 import 'signup.dart';
 
 class LoginScreen extends StatefulWidget {
