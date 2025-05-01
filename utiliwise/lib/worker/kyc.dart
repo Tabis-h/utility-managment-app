@@ -9,6 +9,7 @@ import 'dart:io';
 
 
 import '../main.dart';
+import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 
 class KYCScreen extends StatefulWidget {
@@ -19,6 +20,22 @@ class KYCScreen extends StatefulWidget {
 }
 
 class _KYCScreenState extends State<KYCScreen> {
+
+  final storageService = StorageService();
+  final authService = AuthService();
+
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAuth();  // Add this line
+  }
+
+  Future<void> _initializeAuth() async {
+    await authService.initializeSupabaseAuth();
+  }
+
+
   String? selectedDocType;
   File? documentImage;
   File? selfieImage;
@@ -35,6 +52,16 @@ class _KYCScreenState extends State<KYCScreen> {
   final bucketId = 'kyc-documents'; // Use this exact name in Supabase dashboard
 
   Future<void> uploadKYC() async {
+    print('Session: ${supabase.auth.currentSession}');
+    print('Firebase UID: ${FirebaseAuth.instance.currentUser?.uid}');
+
+    // Check if Firebase user exists first
+    if (FirebaseAuth.instance.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login with Firebase first')),
+      );
+      return;
+    }
     if (selectedDocType == null || documentImage == null || selfieImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please complete all fields')),
@@ -47,33 +74,9 @@ class _KYCScreenState extends State<KYCScreen> {
     try {
       final String uid = FirebaseAuth.instance.currentUser!.uid;
 
-      // Upload document image with auth context
-      final documentPath = 'users/$uid/document.jpg';
-      await supabase.storage
-          .from(bucketId)
-          .uploadBinary(
-        documentPath,
-        await documentImage!.readAsBytes(),
-        fileOptions: const FileOptions(
-          contentType: 'image/jpeg',
-          upsert: true,
-        ),
-      );
-
-      final documentUrl = supabase.storage.from(bucketId).getPublicUrl(documentPath);
-
-      // Upload selfie image with auth context
-      final selfiePath = 'users/$uid/selfie.jpg';
-      await supabase.storage
-          .from(bucketId)
-          .uploadBinary(
-        selfiePath,
-        await selfieImage!.readAsBytes(),
-        fileOptions: const FileOptions(
-          upsert: true,
-        ),
-      );
-      final selfieUrl = supabase.storage.from(bucketId).getPublicUrl(selfiePath);
+      // Using the storage service to upload files
+      final documentUrl = await storageService.uploadKYCDocument(documentImage!, uid, true);
+      final selfieUrl = await storageService.uploadKYCDocument(selfieImage!, uid, false);
 
       // Save to Firebase
       await FirebaseFirestore.instance

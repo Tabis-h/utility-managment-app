@@ -1,13 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'package:utiliwise/worker/worker_dashboard.dart';
 
 import '../Services/authentication.dart';
 import '../Widget/button.dart';
 import '../Widget/snackbar.dart';
-import '../Widget/text_field.dart';
-import 'home.dart';
+import 'home_view.dart';
 import 'login.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -18,13 +17,15 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _formKey = GlobalKey<FormState>(); // Form key for validation
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController workPriceController = TextEditingController();
-  String selectedRole = ""; // Holds the selected role
-  String selectedWorkType = ""; // Holds the selected work type
+  final TextEditingController confirmPasswordController = TextEditingController();
+  String selectedRole = "";
   bool isLoading = false;
+  bool isPasswordVisible = false; // Toggle password visibility
+  bool isConfirmPasswordVisible = false; // Toggle confirm password visibility
 
   @override
   void dispose() {
@@ -32,12 +33,21 @@ class _SignupScreenState extends State<SignupScreen> {
     emailController.dispose();
     passwordController.dispose();
     nameController.dispose();
-    workPriceController.dispose();
+    confirmPasswordController.dispose();
   }
 
   void signupUser() async {
+    if (!_formKey.currentState!.validate()) {
+      return; // Stop if validation fails
+    }
+
     if (selectedRole.isEmpty) {
       showSnackBar(context, "Please select a role (User or Worker)");
+      return;
+    }
+
+    if (passwordController.text != confirmPasswordController.text) {
+      showSnackBar(context, "Passwords do not match");
       return;
     }
 
@@ -60,27 +70,11 @@ class _SignupScreenState extends State<SignupScreen> {
           FirebaseFirestore firestore = FirebaseFirestore.instance;
 
           if (selectedRole == "Worker") {
-            if (workPriceController.text.isEmpty) {
-              showSnackBar(context, "Please enter your work price");
-              setState(() {
-                isLoading = false;
-              });
-              return;
-            }
-            if (selectedWorkType.isEmpty) {
-              showSnackBar(context, "Please select your work type");
-              setState(() {
-                isLoading = false;
-              });
-              return;
-            }
             await firestore.collection('workers').doc(user.uid).set({
               'name': nameController.text,
               'email': emailController.text,
               'role': 'Worker',
               'uid': user.uid,
-              'workPrice': workPriceController.text,
-              'workType': selectedWorkType,
               'kyc': {
                 'status': 'not_submitted',
                 'documentType': '',
@@ -119,8 +113,6 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  @override
-
   Widget _buildRoleToggle(String role, IconData icon) {
     bool isSelected = selectedRole == role;
     return GestureDetector(
@@ -130,13 +122,10 @@ class _SignupScreenState extends State<SignupScreen> {
         });
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.transparent,
-          borderRadius: BorderRadius.horizontal(
-            left: role == "User" ? Radius.circular(25) : Radius.zero,
-            right: role == "Worker" ? Radius.circular(25) : Radius.zero,
-          ),
+          color: isSelected ? Colors.blue : Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -144,13 +133,13 @@ class _SignupScreenState extends State<SignupScreen> {
             Icon(
               icon,
               size: 20,
-              color: isSelected ? Colors.white : Colors.grey,
+              color: isSelected ? Colors.white : Colors.grey[700],
             ),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text(
               role,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey,
+                color: isSelected ? Colors.white : Colors.grey[700],
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -159,124 +148,174 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
+
+  @override
   Widget build(BuildContext context) {
-    double height = MediaQuery.of(context).size.height;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text(
-                  "Select Your Role",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey, // Form key for validation
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Create an Account",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(color: Colors.grey.shade300),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Select your role to get started",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildRoleToggle("User", Icons.person),
-                      Container(
-                        width: 1,
-                        height: 36,
-                        color: Colors.grey.shade300,
-                      ),
                       _buildRoleToggle("Worker", Icons.work),
                     ],
                   ),
-                ),
-                const SizedBox(height: 20),
-                TextFieldInput(
-                  icon: Icons.person,
-                  textEditingController: nameController,
-                  hintText: 'Enter your name',
-                  textInputType: TextInputType.text,
-                ),
-                TextFieldInput(
-                  icon: Icons.email,
-                  textEditingController: emailController,
-                  hintText: 'Enter your email',
-                  textInputType: TextInputType.emailAddress,
-                ),
-                TextFieldInput(
-                  icon: Icons.lock,
-                  textEditingController: passwordController,
-                  hintText: 'Enter your password',
-                  textInputType: TextInputType.text,
-                  isPass: true,
-                ),
-                if (selectedRole == "Worker") ...[
-                  const SizedBox(height: 10),
-                  TextFieldInput(
-                    icon: Icons.monetization_on,
-                    textEditingController: workPriceController,
-                    hintText: 'Enter work price',
-                    textInputType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    value: selectedWorkType.isEmpty ? null : selectedWorkType,
-                    items: [
-                      'Plumber',
-                      'Electrician',
-                      'Carpenter',
-                      'Painter',
-                      'Mechanic',
-                      'Gardener',
-                    ]
-                        .map((type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(type),
-                    ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedWorkType = value!;
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Work Type',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 20),
-                MyButtons(
-                  onTap: signupUser,
-                  text: isLoading ? "Signing Up..." : "Sign Up",
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Already have an account?"),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        " Login",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.person),
+                      hintText: 'Enter your name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Name is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: emailController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.email),
+                      hintText: 'Enter your email',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Email is required';
+                      }
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        return 'Enter a valid email address';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock),
+                      hintText: 'Enter your password',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isPasswordVisible = !isPasswordVisible;
+                          });
+                        },
+                      ),
+                    ),
+                    obscureText: !isPasswordVisible,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Password is required';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: confirmPasswordController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock),
+                      hintText: 'Confirm your password',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isConfirmPasswordVisible = !isConfirmPasswordVisible;
+                          });
+                        },
+                      ),
+                    ),
+                    obscureText: !isConfirmPasswordVisible,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Confirm password is required';
+                      }
+                      if (value != passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  MyButtons(
+                    onTap: signupUser,
+                    text: isLoading ? "Signing Up..." : "Sign Up",
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Already have an account?"),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          " Login",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

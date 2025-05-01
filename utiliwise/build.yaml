@@ -1,0 +1,6 @@
+targets:
+  $default:
+    builders:
+      build_web_compilers|entrypoint:
+        options:
+          dart_flags: ['--define=SUPABASE_URL=value', '--define=SUPABASE_ANON_KEY=value', '--define=JWT_SECRET=value']

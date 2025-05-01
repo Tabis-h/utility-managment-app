@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:utiliwise/worker/worker_notifications.dart';
-
+import 'package:utiliwise/worker/worker_booking_requests.dart';
 import 'kyc.dart';
 
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
@@ -13,7 +13,6 @@ class WorkerDashboard extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<WorkerDashboard> createState() => _WorkerDashboardState();
-
 }
 
 class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
@@ -23,9 +22,13 @@ class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _experienceController = TextEditingController();
+  final TextEditingController _upiIdController = TextEditingController(); // UPI ID Controller
   bool _isAvailable = true;
   String _selectedWorkType = 'Plumber';
-  final List<String> _workTypes = ['Plumber', 'Electrician', 'Mechanic'];
+  final List<String> _workTypes = ['Plumber', 'Electrician', 'Mechanic', 'Gardener'];
+  bool _isUpdating = false;
+
+
   Stream<DocumentSnapshot> get workerStream => FirebaseFirestore.instance
       .collection('workers')
       .doc(FirebaseAuth.instance.currentUser?.uid)
@@ -56,31 +59,48 @@ class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
           _experienceController.text = data['experience'] ?? '';
           _isAvailable = data['isAvailable'] ?? true;
           _selectedWorkType = data['workType'] ?? 'Plumber';
+          _upiIdController.text = data['upiId'] ?? ''; // Load UPI ID
         });
       }
     }
   }
 
   Future<void> _updateWorkerProfile() async {
+    setState(() => _isUpdating = true);
     final workerId = FirebaseAuth.instance.currentUser?.uid;
     if (workerId != null) {
-      await FirebaseFirestore.instance
-          .collection('workers')
-          .doc(workerId)
-          .update({
-        'name': _nameController.text,
-        'email': _emailController.text,
-        'mobile': _mobileController.text,
-        'workPrice': _priceController.text,
-        'description': _descriptionController.text,
-        'experience': _experienceController.text,
-        'isAvailable': _isAvailable,
-        'workType': _selectedWorkType,
-      });
+      try {
+        await FirebaseFirestore.instance
+            .collection('workers')
+            .doc(workerId)
+            .update({
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'mobile': _mobileController.text,
+          'workPrice': _priceController.text,
+          'description': _descriptionController.text,
+          'experience': _experienceController.text,
+          'isAvailable': _isAvailable,
+          'workType': _selectedWorkType,
+          'upiId': _upiIdController.text, // Save UPI ID
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() => _isUpdating = false);
+      }
     }
   }
 
@@ -105,7 +125,7 @@ class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
                 isLabelVisible: unreadNotifications > 0,
                 label: Text('$unreadNotifications'),
                 child: IconButton(
-                  icon: Icon(Icons.notifications),
+                  icon: const Icon(Icons.notifications),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => WorkerNotificationsScreen()),
@@ -132,185 +152,113 @@ class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Personal Information',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Full Name',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.person),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.email),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _mobileController,
-                          decoration: const InputDecoration(
-                            labelText: 'Mobile Number',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.phone),
-                          ),
-                          keyboardType: TextInputType.phone,
-                        ),
-                      ],
+                _buildSection(
+                  title: 'Personal Information',
+                  children: [
+                    _buildTextField(
+                      controller: _nameController,
+                      label: 'Full Name',
+                      icon: Icons.person,
                     ),
-                  ),
+                    _buildTextField(
+                      controller: _emailController,
+                      label: 'Email',
+                      icon: Icons.email,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    _buildTextField(
+                      controller: _mobileController,
+                      label: 'Mobile Number',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    _buildTextField(
+                      controller: _upiIdController,
+                      label: 'UPI ID',
+                      icon: Icons.payment,
+                      prefixText: 'UPI: ', // Optional: Add a prefix
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
-                Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Professional Information',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          value: _selectedWorkType,
-                          decoration: const InputDecoration(
-                            labelText: 'Work Type',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.work),
-                          ),
-                          items: _workTypes.map((type) {
-                            return DropdownMenuItem(
-                              value: type,
-                              child: Text(type),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedWorkType = value!;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _priceController,
-                          decoration: const InputDecoration(
-                            labelText: 'Work Price (per hour)',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.attach_money),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _experienceController,
-                          decoration: const InputDecoration(
-                            labelText: 'Years of Experience',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.timeline),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _descriptionController,
-                          decoration: const InputDecoration(
-                            labelText: 'Work Description',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.description),
-                          ),
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 16),
-                        StreamBuilder<DocumentSnapshot>(
-                          stream: workerStream,
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) return const SizedBox();
+                _buildSection(
+                  title: 'Professional Information',
+                  children: [
+                    _buildDropdown(
+                      value: _selectedWorkType,
+                      label: 'Work Type',
+                      icon: Icons.work,
+                      items: _workTypes,
+                      onChanged: (value) => setState(() => _selectedWorkType = value!),
+                    ),
+                    _buildTextField(
+                      controller: _priceController,
+                      label: 'Work Price (per hour)',
+                      icon: Icons.currency_rupee,
+                      keyboardType: TextInputType.number,
+                    ),
+                    _buildTextField(
+                      controller: _experienceController,
+                      label: 'Years of Experience',
+                      icon: Icons.timeline,
+                      keyboardType: TextInputType.number,
+                    ),
+                    _buildTextField(
+                      controller: _descriptionController,
+                      label: 'Work Description',
+                      icon: Icons.description,
+                      maxLines: 3,
+                    ),
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: workerStream,
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox();
 
-                            final workerData = snapshot.data!.data() as Map<String, dynamic>;
-                            final kycStatus = workerData['kyc']?['status'];
-                            final isVerified = kycStatus == 'verified';
+                        final workerData = snapshot.data!.data() as Map<String, dynamic>;
+                        final kycStatus = workerData['kyc']?['status'];
+                        final isVerified = kycStatus == 'verified';
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SwitchListTile(
-                                  title: const Text('Available for Work'),
-                                  subtitle: Text(isVerified
-                                      ? (_isAvailable ? 'Active' : 'Inactive')
-                                      : 'Complete KYC verification first'),
-                                  value: isVerified && _isAvailable,
-                                  onChanged: isVerified
-                                      ? (value) {
-                                    setState(() {
-                                      _isAvailable = value;
-                                    });
-                                  }
-                                      : null,
-                                ),
-                                if (!isVerified)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: Text(
-                                      'KYC verification is required to enable work availability',
-                                      style: TextStyle(
-                                        color: Colors.red[700],
-                                        fontSize: 12,
-                                      ),
-                                    ),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SwitchListTile(
+                              title: const Text('Available for Work'),
+                              subtitle: Text(isVerified
+                                  ? (_isAvailable ? 'Active' : 'Inactive')
+                                  : 'Complete KYC verification first'),
+                              value: isVerified && _isAvailable,
+                              onChanged: isVerified
+                                  ? (value) {
+                                setState(() {
+                                  _isAvailable = value;
+                                });
+                              }
+                                  : null,
+                            ),
+                            if (!isVerified)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  'KYC verification is required to enable work availability',
+                                  style: TextStyle(
+                                    color: Colors.red[700],
+                                    fontSize: 12,
                                   ),
-                              ],
-                            );
-                          },
-                        )
-                      ],
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _updateWorkerProfile,
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Update Profile',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
+                _buildUpdateButton(),
               ],
             ),
           ),
           const KYCScreen(),
+          const WorkerBookingRequests(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -329,7 +277,107 @@ class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
             selectedIcon: Icon(Icons.verified_user),
             label: 'Verification',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt),
+            label: 'Bookings',
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSection({required String title, required List<Widget> children}) {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    String? prefixText,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          prefixIcon: Icon(icon),
+          prefixText: prefixText,
+        ),
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required String label,
+    required IconData icon,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          prefixIcon: Icon(icon),
+        ),
+        items: items.map((type) {
+          return DropdownMenuItem(
+            value: type,
+            child: Text(type),
+          );
+        }).toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildUpdateButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isUpdating ? null : _updateWorkerProfile,
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: _isUpdating
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text(
+          'Update Profile',
+          style: TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
@@ -342,6 +390,7 @@ class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
     _priceController.dispose();
     _descriptionController.dispose();
     _experienceController.dispose();
+    _upiIdController.dispose(); // Dispose UPI ID controller
     super.dispose();
   }
 }

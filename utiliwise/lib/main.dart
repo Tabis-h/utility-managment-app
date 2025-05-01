@@ -3,21 +3,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:utiliwise/services/admin_service.dart';
-import 'package:utiliwise/src/home.dart';
+import 'package:utiliwise/src/home_view.dart';
 import 'package:utiliwise/src/login.dart';
 import 'package:utiliwise/src/profile.dart';
 import 'package:utiliwise/src/settings.dart';
 import 'package:utiliwise/worker/worker_dashboard.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'admin/admin_console.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp();
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+          apiKey: "AIzaSyBuLwhQTqrUqveL9hyK97u0cap5xTYlNd4",
+          authDomain: "utiliwise-9fe6f.firebaseapp.com",
+          projectId: "utiliwise-9fe6f",
+          messagingSenderId: "987511977342",
+          appId: "1:987511977342:web:628d5339a148b6c92e6f2f"
+      ),
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
 
   // Initialize Supabase
   await supabase.Supabase.initialize(

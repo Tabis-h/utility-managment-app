@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,6 +17,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late User _user;
   bool _isLoading = true;
   bool _isEditing = false;
+  bool _isFetchingLocation = false;
 
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -95,6 +98,69 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _fetchCurrentLocation() async {
+    setState(() {
+      _isFetchingLocation = true;
+    });
+
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location services are disabled')),
+        );
+        return;
+      }
+
+      // Check for location permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permissions are denied')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Location permissions are permanently denied')),
+        );
+        return;
+      }
+
+      // Fetch the current location
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Convert coordinates to address using the geocoding package
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark placemark = placemarks.first;
+        String address =
+            '${placemark.street}, ${placemark.locality}, ${placemark.postalCode}, ${placemark.country}';
+        _addressController.text = address;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching location: $e')),
+      );
+    } finally {
+      setState(() {
+        _isFetchingLocation = false;
+      });
+    }
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -102,6 +168,7 @@ class _ProfilePageState extends State<ProfilePage> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     int maxLines = 1,
+    Widget? suffix,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -114,6 +181,7 @@ class _ProfilePageState extends State<ProfilePage> {
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
+          suffixIcon: suffix,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -147,40 +215,23 @@ class _ProfilePageState extends State<ProfilePage> {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 30),
                 width: double.infinity,
-                color: Colors.white,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade100, Colors.blue.shade50],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
                 child: Column(
                   children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundImage: const AssetImage('assets/images/as.png'),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  spreadRadius: 1,
-                                  blurRadius: 5,
-                                )
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.camera_alt,
-                              size: 20,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          ),
-                        ),
-                      ],
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.blue.shade200,
+                      child: Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 15),
                     Text(
@@ -256,7 +307,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.email,
                         keyboardType: TextInputType.emailAddress,
                       ),
-                      // Inside the Card's Column children, replace the existing mobile TextField with:
                       _buildTextField(
                         controller: _mobileController,
                         label: 'Mobile Number',
@@ -267,12 +317,17 @@ class _ProfilePageState extends State<ProfilePage> {
                           LengthLimitingTextInputFormatter(10),
                         ],
                       ),
-
                       _buildTextField(
                         controller: _addressController,
                         label: 'Address',
                         icon: Icons.location_on,
                         maxLines: 3,
+                        suffix: _isEditing
+                            ? IconButton(
+                          icon: const Icon(Icons.my_location),
+                          onPressed: _fetchCurrentLocation,
+                        )
+                            : null,
                       ),
                     ],
                   ),

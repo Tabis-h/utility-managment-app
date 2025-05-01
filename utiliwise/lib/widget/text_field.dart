@@ -2,49 +2,45 @@ import 'package:flutter/material.dart';
 
 class TextFieldInput extends StatelessWidget {
   final TextEditingController textEditingController;
-  final bool isPass;
   final String hintText;
-  final IconData? icon;
   final TextInputType textInputType;
+  final bool isPass;
+  final IconData icon;
+  final bool isPasswordVisible; // Add this parameter
+  final VoidCallback? onVisibilityChanged; // Add this parameter
+
   const TextFieldInput({
-    super.key,
+    Key? key,
     required this.textEditingController,
-    this.isPass = false,
     required this.hintText,
-    this.icon,
     required this.textInputType,
-  });
+    this.isPass = false,
+    required this.icon,
+    this.isPasswordVisible = false, // Default value
+    this.onVisibilityChanged, // Optional callback
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-      child: TextField(
-        style: const TextStyle(fontSize: 20),
-        controller: textEditingController,
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.black54),
-          hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.black45, fontSize: 18),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide.none,
-            borderRadius: BorderRadius.circular(30),
-          ),
-          border: InputBorder.none,
-          focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.blue, width: 2),
-            borderRadius: BorderRadius.circular(30),
-          ),
-          filled: true,
-          fillColor: const Color(0xFFedf0f8),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 15,
-            horizontal: 20,
-          ),
+    return TextField(
+      controller: textEditingController,
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon),
+        hintText: hintText,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
-        keyboardType: textInputType,
-        obscureText: isPass,
+        suffixIcon: isPass
+            ? IconButton(
+          icon: Icon(
+            isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+          ),
+          onPressed: onVisibilityChanged,
+        )
+            : null,
       ),
+      keyboardType: textInputType,
+      obscureText: isPass && !isPasswordVisible, // Control visibility
     );
   }
 }

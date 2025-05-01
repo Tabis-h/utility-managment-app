@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class WorkerNotificationsScreen extends StatelessWidget {
   @override
@@ -23,10 +24,16 @@ class WorkerNotificationsScreen extends StatelessWidget {
 
           final bookings = snapshot.data!.docs;
 
+          if (bookings.isEmpty) {
+            return Center(child: Text('No pending booking requests'));
+          }
+
           return ListView.builder(
             itemCount: bookings.length,
             itemBuilder: (context, index) {
               final booking = bookings[index].data() as Map<String, dynamic>;
+              // Print booking data for debugging
+              print('Booking data: $booking');
 
               return BookingRequestCard(
                 booking: booking,
@@ -59,6 +66,73 @@ class BookingRequestCard extends StatelessWidget {
     required this.onDecline,
   });
 
+  String _formatDateTime() {
+    try {
+      // Print the date-related fields for debugging
+      print('Formatted Date: ${booking['formattedDate']}');
+      print('DateTime: ${booking['datetime']}');
+      print('Date: ${booking['date']}');
+
+      // Check if we have the formatted date string
+      if (booking['formattedDate'] != null) {
+        return booking['formattedDate'];
+      }
+
+      // Check for datetime field
+      if (booking['datetime'] != null) {
+        final Timestamp timestamp = booking['datetime'] as Timestamp;
+        final DateTime dateTime = timestamp.toDate();
+        return DateFormat('MMMM dd, yyyy').format(dateTime);
+      }
+
+      // Check for date field that might be a Timestamp
+      if (booking['date'] != null) {
+        if (booking['date'] is Timestamp) {
+          final Timestamp timestamp = booking['date'] as Timestamp;
+          final DateTime dateTime = timestamp.toDate();
+          return DateFormat('MMMM dd, yyyy').format(dateTime);
+        }
+        // If date is already a formatted string
+        return booking['date'].toString();
+      }
+
+      return 'Date not available';
+    } catch (e) {
+      print('Error formatting date: $e');
+      return 'Error displaying date';
+    }
+  }
+
+  String _formatTime() {
+    try {
+      // Print the time-related fields for debugging
+      print('Formatted Time: ${booking['formattedTime']}');
+      print('Time: ${booking['time']}');
+
+      // Check for formatted time string
+      if (booking['formattedTime'] != null) {
+        return booking['formattedTime'];
+      }
+
+      // Check for datetime field
+      if (booking['datetime'] != null) {
+        final Timestamp timestamp = booking['datetime'] as Timestamp;
+        final DateTime dateTime = timestamp.toDate();
+        return DateFormat('hh:mm a').format(dateTime);
+      }
+
+      // Use time field if available
+      if (booking['time'] != null) {
+        return booking['time'].toString();
+      }
+
+      return 'Time not available';
+    } catch (e) {
+      print('Error formatting time: $e');
+      return 'Error displaying time';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -76,10 +150,13 @@ class BookingRequestCard extends StatelessWidget {
               ),
             ),
             SizedBox(height: 8),
-            Text('Date: ${booking['date']}'),
-            Text('Time: ${booking['time']}'),
+            Text('Customer: ${booking['customerName'] ?? 'Unknown'}'),
+            Text('Date: ${_formatDateTime()}'),
+            Text('Time: ${_formatTime()}'),
             Text('Address: ${booking['address']}'),
             Text('Description: ${booking['description']}'),
+            if (booking['price'] != null)
+              Text('Price: ${booking['price']}'),
             SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
