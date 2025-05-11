@@ -56,4 +56,4 @@ A cross-platform mobile application that connects users with skilled utility wor
 1. Clone the repository:
    ```bash
    git clone https://github.com/Tabis-h/utility-managment-app.git
-   cd smart-utility-flutter
+   
