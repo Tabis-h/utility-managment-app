@@ -40,8 +40,8 @@ A cross-platform mobile application that connects users with skilled utility wor
 | <img src="utiliwise/assets/screenshots/login.png" width="200"> Login | <img src="utiliwise/assets/screenshots/worker_signup.png" width="200"> Signup |
 | <img src="utiliwise/assets/screenshots/user_home.png" width="200"> Home | <img src="utiliwise/assets/screenshots/worker_dashboard.png" width="200"> Dashboard |
 | <img src="utiliwise/assets/screenshots/hire_worker.png" width="200"> Browse Workers | <img src="utiliwise/assets/screenshots/kyc_upload.png" width="200"> KYC Upload |
-| <img src="assets/screenshots/chat.png" width="200"> Chat | <img src="assets/screenshots/kyc_verified.png" width="200"> KYC Verified |
-|  <img src="assets/screenshots/admin.png" width="200"> Admin Console |
+| <img src="utiliwise/assets/screenshots/chat.png" width="200"> Chat | <img src="utiliwise/assets/screenshots/kyc_verified.png" width="200"> KYC Verified |
+|  <img src="utiliwise/assets/screenshots/admin.png" width="200"> Admin Console |
 
 
 
